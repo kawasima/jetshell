@@ -46,9 +46,13 @@ public class JetShellTool {
     private List<String> replayableHistoryPrevious;
     private Set<String> startupSnippetIds;
     private boolean suppressOutput = false;
-    boolean hadFailure = false;
+    private boolean hadFailure = false;
 
     public boolean testPrompt = false;
+
+    public boolean hadFailure() {
+        return hadFailure;
+    }
 
     static final Preferences PREFS = Preferences.userRoot().node("tool/JetShell");
     private static final String STARTUP_KEY = "STARTUP";
