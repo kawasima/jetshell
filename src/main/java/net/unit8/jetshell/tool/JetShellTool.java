@@ -57,6 +57,8 @@ public class JetShellTool {
     static final Preferences PREFS = Preferences.userRoot().node("tool/JetShell");
     private static final String STARTUP_KEY = "STARTUP";
     private static final String GLOB_CHARS = "*?{[";
+    // Sentinel returned by processCommandArgs when -help or -version is handled (normal early exit)
+    private static final List<String> EARLY_EXIT = Collections.emptyList();
 
     static final String DEFAULT_STARTUP =
             "\n" +
@@ -187,7 +189,10 @@ public class JetShellTool {
     public int start(String[] args) throws Exception {
         List<String> loadList = processCommandArgs(args);
         if (loadList == null) {
-            return 1;
+            return 1; // argument error
+        }
+        if (loadList == EARLY_EXIT) {
+            return 0; // -help or -version: normal early exit
         }
 
         if (testPrompt) {
@@ -288,6 +293,7 @@ public class JetShellTool {
             }
         } catch (IOException ex) {
             hard("Unexpected exception: %s", ex);
+            hadFailure = true;
         } finally {
             closeState();
         }
@@ -312,6 +318,7 @@ public class JetShellTool {
             }
         } catch (Exception ex) {
             hard("Unexpected exception: %s", ex);
+            hadFailure = true;
         }
     }
 
@@ -367,7 +374,6 @@ public class JetShellTool {
         closeState();
         replayableHistoryPrevious = replayableHistory;
         replayableHistory = new ArrayList<>();
-        hadFailure = false;
 
         state = JShell.builder()
                 .in(userin)
@@ -1011,6 +1017,7 @@ public class JetShellTool {
             toReplay = Collections.emptyList();
         }
         hard("Resetting state.");
+        hadFailure = false;
         resetState(Collections.emptyList());
         for (String source : toReplay) {
             if (!quiet) {
@@ -1181,10 +1188,10 @@ public class JetShellTool {
                         break;
                     case "-help":
                         printUsage();
-                        return null;
+                        return EARLY_EXIT;
                     case "-version":
                         cmdout.printf("jetshell %s%n", version());
-                        return null;
+                        return EARLY_EXIT;
                     default:
                         cmderr.printf("Unknown option: %s%n", arg);
                         printUsage();
