@@ -46,6 +46,7 @@ public class JetShellTool {
     private List<String> replayableHistoryPrevious;
     private Set<String> startupSnippetIds;
     private boolean suppressOutput = false;
+    private boolean hadFailure = false;
 
     public boolean testPrompt = false;
 
@@ -239,6 +240,7 @@ public class JetShellTool {
                 .build();
         lineReader.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
 
+        boolean isBatchMode = !terminal.getType().equals("dumb") && System.console() == null;
         try {
             try {
                 resetState(loadList);
@@ -258,6 +260,9 @@ public class JetShellTool {
         } finally {
             closeState();
             terminal.close();
+        }
+        if (isBatchMode && hadFailure) {
+            System.exit(1);
         }
     }
 
@@ -435,7 +440,9 @@ public class JetShellTool {
         boolean isActive = false;
         List<SnippetEvent> events = state.eval(source);
         for (SnippetEvent e : events) {
-            failed |= handleEvent(e);
+            boolean eventFailed = handleEvent(e);
+            failed |= eventFailed;
+            hadFailure |= eventFailed;
             isActive |= e.causeSnippet() == null
                     && e.status().isActive()
                     && e.snippet().subKind() != SubKind.VAR_VALUE_SUBKIND;
