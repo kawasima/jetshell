@@ -22,7 +22,7 @@ class SourceCommand {
                 "   The source JAR is downloaded automatically if needed.",
                 arg -> {
                     if (arg.isEmpty()) {
-                        tool.hard("/source requires a class name");
+                        tool.error("/source requires a class name");
                         return false;
                     }
 
@@ -50,7 +50,7 @@ class SourceCommand {
                         }
                     }
 
-                    tool.hard("Class %s not found in resolved artifacts", arg);
+                    tool.error("Class %s not found in resolved artifacts", arg);
                     return false;
                 },
                 JetShellTool.CommandKind.NORMAL);
@@ -74,7 +74,7 @@ class SourceCommand {
         try (JarFile jarFile = new JarFile(sourceJar)) {
             JarEntry entry = jarFile.getJarEntry(sourcePath);
             if (entry == null) {
-                tool.hard("Source file %s not found in %s", sourcePath, sourceJar.getName());
+                tool.error("Source file %s not found in %s", sourcePath, sourceJar.getName());
                 return false;
             }
 

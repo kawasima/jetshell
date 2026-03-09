@@ -27,7 +27,7 @@ class ResolveCommand {
                 "   spec is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>",
                 arg -> {
                     if (arg.isEmpty()) {
-                        tool.hard("/resolve requires a maven spec argument");
+                        tool.error("/resolve requires a maven spec argument");
                         return false;
                     }
                     try {
