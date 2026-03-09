@@ -85,10 +85,16 @@ class DocCommand {
         int paren = s.indexOf('(');
         if (paren >= 0) s = s.substring(0, paren).trim();
 
-        // Repeatedly strip trailing lowercase-starting segments
+        // Repeatedly strip trailing lowercase-starting segments.
+        // Also handles trailing '.' (e.g. "System.") by treating the empty segment as lowercase.
         while (true) {
             int lastDot = s.lastIndexOf('.');
             if (lastDot < 0) break;
+            if (lastDot + 1 >= s.length()) {
+                // Trailing dot — strip it
+                s = s.substring(0, lastDot);
+                continue;
+            }
             char afterDot = s.charAt(lastDot + 1);
             if (Character.isLowerCase(afterDot)) {
                 s = s.substring(0, lastDot);

@@ -749,7 +749,9 @@ public class JetShellTool {
             Command[] candidates = findCommand(cmd, c -> true);
             if (candidates.length == 1) {
                 result = candidates[0].completions.completionSuggestions(arg, cursor - (space + 1), anchor).stream();
-                anchor[0] += space + 1;
+                if (anchor[0] >= 0) {
+                    anchor[0] += space + 1;
+                }
             } else {
                 result = Stream.empty();
             }
