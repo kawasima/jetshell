@@ -320,18 +320,28 @@ public class JetShellTool {
             regenerateOnDeath = false;
             return "";
         }
-        String trimmed = raw.strip();
-        if (trimmed.isEmpty()) {
-            return incomplete;
-        }
-        String line = incomplete + trimmed;
+        // Strip only trailing whitespace to preserve leading spaces in source code
+        // (e.g. indentation in text blocks and multiline expressions).
+        String stripped = raw.stripTrailing();
 
-        if (incomplete.isEmpty() && line.startsWith("/") && !line.startsWith("//") && !line.startsWith("/*")) {
-            processCommand(line.trim());
-            return "";
-        } else {
-            return processSourceCatchingReset(line);
+        // When there is no incomplete input yet, check if this line is a command.
+        // Use stripLeading() so a slash preceded by spaces is still recognized as a command.
+        if (incomplete.isEmpty()) {
+            String commandCandidate = stripped.stripLeading();
+            if (commandCandidate.startsWith("/") &&
+                    !commandCandidate.startsWith("//") &&
+                    !commandCandidate.startsWith("/*")) {
+                processCommand(commandCandidate.trim());
+                return "";
+            }
         }
+
+        // Ignore whitespace-only lines when there is nothing to continue.
+        if (stripped.isEmpty() && incomplete.isEmpty()) {
+            return "";
+        }
+
+        return processSourceCatchingReset(incomplete + stripped);
     }
 
     // --- State management ---
@@ -674,7 +684,7 @@ public class JetShellTool {
         } else {
             suggestions = analysis.completionSuggestions(text, cursor, anchor);
         }
-        return suggestions;
+        return suggestions != null ? suggestions : Collections.emptyList();
     }
 
     private <T> T waitWithSpinner(Terminal terminal, java.util.concurrent.Future<T> future) {
@@ -692,8 +702,12 @@ public class JetShellTool {
             return future.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            terminal.writer().print("  \b\b");
+            terminal.writer().flush();
             return null;
         } catch (java.util.concurrent.ExecutionException e) {
+            terminal.writer().print("  \b\b");
+            terminal.writer().flush();
             return null;
         }
     }
@@ -849,7 +863,13 @@ public class JetShellTool {
                 }
                 return;
             }
-            snippets = "all".equals(parts[0]) ? state.snippets() : state.snippets().filter(s -> state.status(s).isActive());
+            if ("all".equals(parts[0])) {
+                snippets = state.snippets();
+            } else if ("start".equals(parts[0])) {
+                snippets = state.snippets().filter(s -> startupSnippetIds.contains(s.id()));
+            } else {
+                snippets = state.snippets().filter(s -> state.status(s).isActive());
+            }
         } else {
             filename = arg;
             snippets = state.snippets().filter(s -> state.status(s).isActive());
