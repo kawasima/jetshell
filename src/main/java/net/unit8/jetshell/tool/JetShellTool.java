@@ -358,7 +358,6 @@ public class JetShellTool {
                 .in(userin)
                 .out(userout)
                 .err(usererr)
-                .executionEngine("local")
                 .build();
         analysis = state.sourceCodeAnalysis();
 
@@ -1007,33 +1006,8 @@ public class JetShellTool {
             error("/classpath requires a path argument");
             return;
         }
-        Path p = toPathResolvingUserHome(arg);
-        String name = p.getFileName().toString();
-        if (name.contains("*") || name.contains("?") || name.contains("{") || name.contains("[")) {
-            Path dir = p.getParent() != null ? p.getParent() : Path.of(".");
-            try {
-                PathMatcher matcher = dir.getFileSystem().getPathMatcher("glob:" + name);
-                List<Path> matched;
-                try (Stream<Path> stream = Files.list(dir)) {
-                    matched = stream.filter(f -> matcher.matches(f.getFileName()))
-                            .sorted()
-                            .collect(Collectors.toList());
-                }
-                if (matched.isEmpty()) {
-                    error("No files matched: %s", arg);
-                } else {
-                    matched.forEach(resolved -> {
-                        state.addToClasspath(resolved.toString());
-                        fluff("Path %s added to classpath", resolved);
-                    });
-                }
-            } catch (IOException | java.util.regex.PatternSyntaxException e) {
-                error("Cannot expand glob: %s", e.getMessage());
-            }
-        } else {
-            state.addToClasspath(p.toString());
-            fluff("Path %s added to classpath", arg);
-        }
+        state.addToClasspath(toPathResolvingUserHome(arg).toString());
+        fluff("Path %s added to classpath", arg);
     }
 
     private void cmdHelp(String arg) {
