@@ -17,8 +17,6 @@ import java.util.function.Predicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Command line REPL tool for Java using the JShell API.
@@ -660,10 +658,10 @@ public class JetShellTool {
             if (matches.length == 1) {
                 command = matches[0];
             } else if (matches.length == 0) {
-                hard("No such command: %s", cmd);
+                error("No such command: %s", cmd);
                 return;
             } else {
-                hard("Command '%s' is ambiguous: %s", cmd,
+                error("Command '%s' is ambiguous: %s", cmd,
                         Arrays.stream(matches).map(c -> c.command).collect(Collectors.joining(", ")));
                 return;
             }
@@ -846,7 +844,7 @@ public class JetShellTool {
                     .filter(sn -> state.status(sn).isActive())
                     .collect(Collectors.toList());
             if (matched.isEmpty()) {
-                hard("No such snippet: %s", trimmed);
+                error("No such snippet: %s", trimmed);
                 return;
             }
             snippets = matched.stream();
@@ -856,7 +854,7 @@ public class JetShellTool {
 
     private void cmdDrop(String arg) {
         if (arg.isEmpty()) {
-            hard("/drop requires an argument");
+            error("/drop requires an argument");
             return;
         }
         state.snippets()
@@ -865,7 +863,7 @@ public class JetShellTool {
                 .findFirst()
                 .ifPresentOrElse(
                         sn -> state.drop(sn).forEach(this::handleEvent),
-                        () -> hard("No such snippet: %s", arg)
+                        () -> error("No such snippet: %s", arg)
                 );
     }
 
@@ -876,7 +874,7 @@ public class JetShellTool {
         if (parts.length == 2 && ("all".equals(parts[0]) || "start".equals(parts[0]) || "history".equals(parts[0]))) {
             filename = parts[1];
             if (filename.isBlank()) {
-                hard("/save requires a filename");
+                error("/save requires a filename");
                 return;
             }
             if ("history".equals(parts[0])) {
@@ -886,7 +884,7 @@ public class JetShellTool {
                         writer.newLine();
                     }
                 } catch (IOException e) {
-                    hard("File '%s' could not be written: %s", filename, e.getMessage());
+                    error("File '%s' could not be written: %s", filename, e.getMessage());
                 }
                 return;
             }
@@ -899,7 +897,7 @@ public class JetShellTool {
             }
         } else {
             if (arg.isBlank()) {
-                hard("/save requires a filename");
+                error("/save requires a filename");
                 return;
             }
             filename = arg;
@@ -915,22 +913,22 @@ public class JetShellTool {
                 }
             });
         } catch (UncheckedIOException e) {
-            hard("File '%s' could not be written: %s", filename, e.getCause().getMessage());
+            error("File '%s' could not be written: %s", filename, e.getCause().getMessage());
         } catch (IOException e) {
-            hard("File '%s' could not be written: %s", filename, e.getMessage());
+            error("File '%s' could not be written: %s", filename, e.getMessage());
         }
     }
 
     private void cmdOpen(String filename) {
         if (filename.isEmpty()) {
-            hard("/open requires a filename argument");
+            error("/open requires a filename argument");
             return;
         }
         try {
             String content = Files.readString(toPathResolvingUserHome(filename));
             processSource(content);
         } catch (IOException e) {
-            hard("File '%s' not found: %s", filename, e.getMessage());
+            error("File '%s' not found: %s", filename, e.getMessage());
         }
     }
 
@@ -988,7 +986,7 @@ public class JetShellTool {
 
     private void cmdClasspath(String arg) {
         if (arg.isEmpty()) {
-            hard("/classpath requires a path argument");
+            error("/classpath requires a path argument");
             return;
         }
         state.addToClasspath(toPathResolvingUserHome(arg).toString());
@@ -1009,14 +1007,14 @@ public class JetShellTool {
             if (command != null) {
                 hard("%s", command.help);
             } else {
-                hard("No help found for: %s", arg);
+                error("No help found for: %s", arg);
             }
         }
     }
 
     private void cmdUseHistoryEntry(int index) {
         if (replayableHistory == null || replayableHistory.isEmpty()) {
-            hard("No history to replay");
+            error("No history to replay");
             return;
         }
         int idx = index < 0 ? replayableHistory.size() + index : index;
@@ -1025,7 +1023,7 @@ public class JetShellTool {
             hard("%s", source);
             processSourceCatchingReset(source);
         } else {
-            hard("History entry not found: %d", index);
+            error("History entry not found: %d", index);
         }
     }
 
@@ -1104,7 +1102,8 @@ public class JetShellTool {
                             try {
                                 cmdlineStartup = Files.readString(Paths.get(filename));
                             } catch (IOException e) {
-                                hard("File '%s' for start-up is not accessible: %s", filename, e.getMessage());
+                                cmderr.printf("File '%s' for start-up is not accessible: %s%n", filename, e.getMessage());
+                                return null;
                             }
                         } else {
                             cmderr.printf("Argument to -startup missing.%n");

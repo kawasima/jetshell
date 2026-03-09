@@ -23,14 +23,14 @@ class DocCommand {
                 "   Source JARs are downloaded automatically if needed.",
                 arg -> {
                     if (arg.isEmpty()) {
-                        tool.hard("/doc requires an expression argument");
+                        tool.error("/doc requires an expression argument");
                         return false;
                     }
                     SourceCodeAnalysis analysis = tool.getState().sourceCodeAnalysis();
                     List<SourceCodeAnalysis.Documentation> docs =
                             analysis.documentation(arg, arg.length(), true);
                     if (docs.isEmpty()) {
-                        tool.hard("No documentation found for: %s", arg);
+                        tool.error("No documentation found for: %s", arg);
                         return false;
                     }
 
