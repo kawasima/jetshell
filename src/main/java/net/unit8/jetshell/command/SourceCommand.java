@@ -1,10 +1,12 @@
 package net.unit8.jetshell.command;
 
 import jdk.jshell.ImportSnippet;
+import jdk.jshell.SourceCodeAnalysis;
 import net.unit8.jetshell.tool.JetShellTool;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -57,17 +59,31 @@ class SourceCommand {
     }
 
     /**
-     * If arg contains no '.', try to resolve it as a simple class name using active imports.
-     * e.g. "StringUtils" -> "org.apache.commons.lang3.StringUtils"
+     * If arg contains no '.', try to resolve it to an FQCN:
+     * 1. Check explicit non-static imports (e.g. import a.b.Foo)
+     * 2. Fall back to SourceCodeAnalysis.listQualifiedNames (covers wildcard imports)
      */
     private static String resolveName(JetShellTool tool, String arg) {
         if (arg.contains(".")) return arg;
-        return tool.getState().imports()
+
+        // 1. Explicit imports
+        String fromImports = tool.getState().imports()
                 .filter(imp -> !imp.isStatic())
                 .map(ImportSnippet::fullname)
                 .filter(fqcn -> fqcn.endsWith("." + arg))
                 .findFirst()
-                .orElse(arg);
+                .orElse(null);
+        if (fromImports != null) return fromImports;
+
+        // 2. Wildcard imports via SourceCodeAnalysis
+        SourceCodeAnalysis sca = tool.getState().sourceCodeAnalysis();
+        SourceCodeAnalysis.QualifiedNames qn = sca.listQualifiedNames(arg, arg.length());
+        List<String> names = qn.getNames();
+        if (!names.isEmpty()) {
+            return names.get(0);
+        }
+
+        return arg;
     }
 
     private static boolean displaySource(JetShellTool tool, File sourceJar, String sourcePath) {

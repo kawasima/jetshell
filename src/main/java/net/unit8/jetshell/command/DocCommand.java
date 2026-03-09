@@ -100,16 +100,28 @@ class DocCommand {
     }
 
     /**
-     * If className contains no '.', resolve it to FQCN using active imports.
+     * If className contains no '.', resolve it to FQCN:
+     * 1. Explicit non-static imports, 2. SourceCodeAnalysis (covers wildcard imports).
      */
     private static String resolveName(JetShellTool tool, String className) {
         if (className.contains(".")) return className;
-        return tool.getState().imports()
+
+        // 1. Explicit imports
+        String fromImports = tool.getState().imports()
                 .filter(imp -> !imp.isStatic())
                 .map(ImportSnippet::fullname)
                 .filter(fqcn -> fqcn.endsWith("." + className))
                 .findFirst()
-                .orElse(className);
+                .orElse(null);
+        if (fromImports != null) return fromImports;
+
+        // 2. Wildcard imports via SourceCodeAnalysis
+        SourceCodeAnalysis.QualifiedNames qn =
+                tool.getState().sourceCodeAnalysis().listQualifiedNames(className, className.length());
+        List<String> names = qn.getNames();
+        if (!names.isEmpty()) return names.get(0);
+
+        return className;
     }
 
     /**

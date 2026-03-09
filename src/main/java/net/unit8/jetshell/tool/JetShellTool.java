@@ -108,9 +108,8 @@ public class JetShellTool {
     }
 
     public void error(String format, Object... args) {
-        if (!suppressOutput) {
-            cmderr.printf("|  " + format + "%n", args);
-        }
+        // Errors are always shown, even during startup (suppressOutput only mutes normal output)
+        cmderr.printf("|  " + format + "%n", args);
     }
 
     public void fluff(String format, Object... args) {
@@ -695,14 +694,24 @@ public class JetShellTool {
         return suggestions != null ? suggestions : Collections.emptyList();
     }
 
+    private static final int SPINNER_TIMEOUT_MS = 10_000;
+
     private <T> T waitWithSpinner(Terminal terminal, java.util.concurrent.Future<T> future) {
         int spinIdx = 0;
+        int elapsed = 0;
         try {
             while (!future.isDone()) {
+                if (elapsed >= SPINNER_TIMEOUT_MS) {
+                    future.cancel(true);
+                    terminal.writer().print("  \b\b");
+                    terminal.writer().flush();
+                    return null;
+                }
                 terminal.writer().print(" " + SPINNER_CHARS[spinIdx % SPINNER_CHARS.length] + "\b\b");
                 terminal.writer().flush();
                 spinIdx++;
                 Thread.sleep(100);
+                elapsed += 100;
             }
             // Clear spinner
             terminal.writer().print("  \b\b");
@@ -710,6 +719,7 @@ public class JetShellTool {
             return future.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            future.cancel(true);
             terminal.writer().print("  \b\b");
             terminal.writer().flush();
             return null;
@@ -1053,8 +1063,10 @@ public class JetShellTool {
         if (pathString.startsWith("~")) {
             String home = System.getProperty("user.home");
             String remainder = pathString.substring(1);
-            if (!remainder.isEmpty() && remainder.startsWith(File.separator)) {
-                remainder = remainder.substring(File.separator.length());
+            // Strip leading separator — accept both '/' (Unix) and '\' (Windows)
+            // so that ~/foo works on all platforms regardless of File.separator.
+            if (!remainder.isEmpty() && (remainder.charAt(0) == '/' || remainder.charAt(0) == '\\')) {
+                remainder = remainder.substring(1);
             }
             if (remainder.isEmpty()) {
                 return Paths.get(home);
@@ -1100,7 +1112,7 @@ public class JetShellTool {
                         if (ai.hasNext()) {
                             String filename = ai.next();
                             try {
-                                cmdlineStartup = Files.readString(Paths.get(filename));
+                                cmdlineStartup = Files.readString(toPathResolvingUserHome(filename));
                             } catch (IOException e) {
                                 cmderr.printf("File '%s' for start-up is not accessible: %s%n", filename, e.getMessage());
                                 return null;
