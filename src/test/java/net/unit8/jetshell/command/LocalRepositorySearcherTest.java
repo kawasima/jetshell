@@ -1,11 +1,15 @@
 package net.unit8.jetshell.command;
 
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 
 import static org.testng.Assert.*;
@@ -15,6 +19,24 @@ public class LocalRepositorySearcherTest {
 
     private Path tempRepo;
     private LocalRepositorySearcher searcher;
+
+    @AfterMethod
+    public void tearDown() throws IOException {
+        if (tempRepo != null) {
+            Files.walkFileTree(tempRepo, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    Files.delete(file);
+                    return FileVisitResult.CONTINUE;
+                }
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+    }
 
     @BeforeMethod
     public void setUp() throws IOException {
