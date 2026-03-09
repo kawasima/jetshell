@@ -40,8 +40,8 @@ class SourceCommand {
                             // Found the class — ensure source JAR exists
                             File sourceJar = context.ensureSourceJar(jar);
                             if (sourceJar == null) {
-                                tool.hard("Source JAR not available for %s", jar.getName());
-                                return false;
+                                tool.error("Source JAR not available for %s", jar.getName());
+                                continue;
                             }
 
                             return displaySource(tool, sourceJar, sourcePath);
