@@ -1011,15 +1011,23 @@ public class JetShellTool {
         String name = p.getFileName().toString();
         if (name.contains("*") || name.contains("?") || name.contains("{") || name.contains("[")) {
             Path dir = p.getParent() != null ? p.getParent() : Path.of(".");
-            PathMatcher matcher = dir.getFileSystem().getPathMatcher("glob:" + name);
-            try (Stream<Path> stream = Files.list(dir)) {
-                stream.filter(f -> matcher.matches(f.getFileName()))
-                        .sorted()
-                        .forEach(resolved -> {
-                            state.addToClasspath(resolved.toString());
-                            fluff("Path %s added to classpath", resolved);
-                        });
-            } catch (IOException e) {
+            try {
+                PathMatcher matcher = dir.getFileSystem().getPathMatcher("glob:" + name);
+                List<Path> matched;
+                try (Stream<Path> stream = Files.list(dir)) {
+                    matched = stream.filter(f -> matcher.matches(f.getFileName()))
+                            .sorted()
+                            .collect(Collectors.toList());
+                }
+                if (matched.isEmpty()) {
+                    error("No files matched: %s", arg);
+                } else {
+                    matched.forEach(resolved -> {
+                        state.addToClasspath(resolved.toString());
+                        fluff("Path %s added to classpath", resolved);
+                    });
+                }
+            } catch (IOException | java.util.regex.PatternSyntaxException e) {
                 error("Cannot expand glob: %s", e.getMessage());
             }
         } else {
