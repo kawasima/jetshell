@@ -40,6 +40,19 @@ public class BatchModeExitCodeTest extends JetShellTesting {
         );
     }
 
+    public void testHadFailureSetOnRuntimeException() {
+        test(
+                a -> {
+                    if (!a) {
+                        setCommandInput("throw new RuntimeException(\"boom\");\n");
+                    } else {
+                        drainOutputs();
+                        assertTrue(repl.hadFailure(), "hadFailure should be true after a runtime exception");
+                    }
+                }
+        );
+    }
+
     public void testHadFailureResetOnReload() {
         test(
                 a -> {

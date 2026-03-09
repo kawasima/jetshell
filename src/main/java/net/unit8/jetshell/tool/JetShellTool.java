@@ -184,10 +184,10 @@ public class JetShellTool {
 
     // --- Startup ---
 
-    public void start(String[] args) throws Exception {
+    public int start(String[] args) throws Exception {
         List<String> loadList = processCommandArgs(args);
         if (loadList == null) {
-            return;
+            return 0;
         }
 
         if (testPrompt) {
@@ -195,6 +195,7 @@ public class JetShellTool {
         } else {
             startInteractive(loadList);
         }
+        return hadFailure ? 1 : 0;
     }
 
     private void startInteractive(List<String> loadList) throws Exception {
@@ -244,8 +245,6 @@ public class JetShellTool {
                 .build();
         lineReader.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
 
-        // System.console() returns null when stdin is piped (batch mode)
-        boolean isBatchMode = System.console() == null;
         try {
             try {
                 resetState(loadList);
@@ -265,10 +264,6 @@ public class JetShellTool {
         } finally {
             closeState();
             terminal.close();
-        }
-        // In batch mode, propagate snippet failures to the shell via exit code
-        if (isBatchMode && hadFailure) {
-            System.exit(1);
         }
     }
 
@@ -496,6 +491,7 @@ public class JetShellTool {
                 hard("Caused failure of dependent %s", ((DeclarationSnippet) sn).name());
             }
             printDiagnostics(source, diagnostics);
+            return true;
         } else {
             // Update event
             if (sn instanceof DeclarationSnippet) {
