@@ -26,7 +26,9 @@ public class ResolveContext {
     }
 
     public void addResolved(String spec, List<File> files) {
-        resolvedSpecs.add(spec);
+        if (!resolvedFiles.containsKey(spec)) {
+            resolvedSpecs.add(spec);
+        }
         resolvedFiles.put(spec, files);
     }
 
@@ -72,8 +74,11 @@ public class ResolveContext {
 
         // Derive GAV from local repo path using Path API (OS-independent):
         // <repoRoot>/org/apache/commons/commons-lang3/3.14.0/commons-lang3-3.14.0.jar
-        Path repoRoot = Paths.get(System.getProperty("user.home"), ".m2", "repository");
-        Path jarPath = jar.toPath().toAbsolutePath();
+        String localRepoSysProp = System.getProperty("maven.repo.local");
+        Path repoRoot = (localRepoSysProp != null && !localRepoSysProp.isEmpty())
+                ? Paths.get(localRepoSysProp).toAbsolutePath().normalize()
+                : Paths.get(System.getProperty("user.home"), ".m2", "repository").toAbsolutePath().normalize();
+        Path jarPath = jar.toPath().toAbsolutePath().normalize();
         if (!jarPath.startsWith(repoRoot)) return null;
 
         Path relative = repoRoot.relativize(jarPath);
