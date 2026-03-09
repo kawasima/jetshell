@@ -1,7 +1,13 @@
 package net.unit8.jetshell.tool;
 
+import net.unit8.jetshell.command.JetShellCommandRegister;
 import org.testng.annotations.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -51,6 +57,26 @@ public class BatchModeExitCodeTest extends JetShellTesting {
                     }
                 }
         );
+    }
+
+    public void testStartReturnsOneOnFailure() throws Exception {
+        ByteArrayInputStream in = new ByteArrayInputStream("int x = \"not an int\";\n/exit\n".getBytes());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        JetShellTool tool = JetShellTool.create(in, new PrintStream(out), new PrintStream(out));
+        new JetShellCommandRegister().register(tool);
+        tool.testPrompt = true;
+        int exitCode = tool.start(new String[0]);
+        assertEquals(exitCode, 1, "start() should return 1 when a snippet fails");
+    }
+
+    public void testStartReturnsZeroOnSuccess() throws Exception {
+        ByteArrayInputStream in = new ByteArrayInputStream("int x = 1;\n/exit\n".getBytes());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        JetShellTool tool = JetShellTool.create(in, new PrintStream(out), new PrintStream(out));
+        new JetShellCommandRegister().register(tool);
+        tool.testPrompt = true;
+        int exitCode = tool.start(new String[0]);
+        assertEquals(exitCode, 0, "start() should return 0 when all snippets succeed");
     }
 
     public void testHadFailureResetOnReload() {
