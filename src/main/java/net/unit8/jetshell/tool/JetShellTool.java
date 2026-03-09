@@ -341,7 +341,8 @@ public class JetShellTool {
             return "";
         }
 
-        return processSourceCatchingReset(incomplete + stripped);
+        String combined = incomplete.isEmpty() ? stripped : incomplete + "\n" + stripped;
+        return processSourceCatchingReset(combined);
     }
 
     // --- State management ---
@@ -829,13 +830,26 @@ public class JetShellTool {
     // --- Command implementations ---
 
     private void cmdList(String arg) {
+        String trimmed = (arg == null) ? "" : arg.trim();
         Stream<Snippet> snippets;
-        if ("all".equals(arg)) {
+        if ("all".equals(trimmed)) {
             snippets = state.snippets();
-        } else if ("start".equals(arg)) {
+        } else if ("start".equals(trimmed)) {
             snippets = state.snippets().filter(s -> startupSnippetIds.contains(s.id()));
-        } else {
+        } else if (trimmed.isEmpty()) {
             snippets = state.snippets().filter(s -> state.status(s).isActive());
+        } else {
+            List<Snippet> matched = state.snippets()
+                    .filter(sn -> sn.id().equals(trimmed)
+                            || (sn instanceof DeclarationSnippet
+                                && ((DeclarationSnippet) sn).name().equals(trimmed)))
+                    .filter(sn -> state.status(sn).isActive())
+                    .collect(Collectors.toList());
+            if (matched.isEmpty()) {
+                hard("No such snippet: %s", trimmed);
+                return;
+            }
+            snippets = matched.stream();
         }
         snippets.forEach(sn -> hard("%4s : %s", sn.id(), sn.source().replace("\n", "\n       ")));
     }
@@ -900,6 +914,8 @@ public class JetShellTool {
                     throw new UncheckedIOException(e);
                 }
             });
+        } catch (UncheckedIOException e) {
+            hard("File '%s' could not be written: %s", filename, e.getCause().getMessage());
         } catch (IOException e) {
             hard("File '%s' could not be written: %s", filename, e.getMessage());
         }
