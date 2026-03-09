@@ -358,6 +358,7 @@ public class JetShellTool {
                 .in(userin)
                 .out(userout)
                 .err(usererr)
+                .executionEngine("local")
                 .build();
         analysis = state.sourceCodeAnalysis();
 
@@ -1006,8 +1007,25 @@ public class JetShellTool {
             error("/classpath requires a path argument");
             return;
         }
-        state.addToClasspath(toPathResolvingUserHome(arg).toString());
-        fluff("Path %s added to classpath", arg);
+        Path p = toPathResolvingUserHome(arg);
+        String name = p.getFileName().toString();
+        if (name.contains("*") || name.contains("?") || name.contains("{") || name.contains("[")) {
+            Path dir = p.getParent() != null ? p.getParent() : Path.of(".");
+            PathMatcher matcher = dir.getFileSystem().getPathMatcher("glob:" + name);
+            try (Stream<Path> stream = Files.list(dir)) {
+                stream.filter(f -> matcher.matches(f.getFileName()))
+                        .sorted()
+                        .forEach(resolved -> {
+                            state.addToClasspath(resolved.toString());
+                            fluff("Path %s added to classpath", resolved);
+                        });
+            } catch (IOException e) {
+                error("Cannot expand glob: %s", e.getMessage());
+            }
+        } else {
+            state.addToClasspath(p.toString());
+            fluff("Path %s added to classpath", arg);
+        }
     }
 
     private void cmdHelp(String arg) {
