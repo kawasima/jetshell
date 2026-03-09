@@ -15,6 +15,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.prefs.Preferences;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,6 +51,7 @@ public class JetShellTool {
 
     static final Preferences PREFS = Preferences.userRoot().node("tool/JetShell");
     private static final String STARTUP_KEY = "STARTUP";
+    private static final String GLOB_CHARS = "*?{[";
 
     static final String DEFAULT_STARTUP =
             "\n" +
@@ -1009,25 +1011,24 @@ public class JetShellTool {
         }
         Path p = toPathResolvingUserHome(arg);
         String name = p.getFileName().toString();
-        if (name.contains("*") || name.contains("?") || name.contains("{") || name.contains("[")) {
+        if (name.chars().anyMatch(c -> GLOB_CHARS.indexOf(c) >= 0)) {
             Path dir = p.getParent() != null ? p.getParent() : Path.of(".");
             try {
                 PathMatcher matcher = dir.getFileSystem().getPathMatcher("glob:" + name);
-                List<Path> matched;
                 try (Stream<Path> stream = Files.list(dir)) {
-                    matched = stream.filter(f -> matcher.matches(f.getFileName()))
+                    List<Path> matched = stream.filter(f -> matcher.matches(f.getFileName()))
                             .sorted()
                             .collect(Collectors.toList());
+                    if (matched.isEmpty()) {
+                        error("No files matched: %s", arg);
+                    } else {
+                        matched.forEach(resolved -> {
+                            state.addToClasspath(resolved.toString());
+                            fluff("Path %s added to classpath", resolved);
+                        });
+                    }
                 }
-                if (matched.isEmpty()) {
-                    error("No files matched: %s", arg);
-                } else {
-                    matched.forEach(resolved -> {
-                        state.addToClasspath(resolved.toString());
-                        fluff("Path %s added to classpath", resolved);
-                    });
-                }
-            } catch (IOException | java.util.regex.PatternSyntaxException e) {
+            } catch (IOException | PatternSyntaxException e) {
                 error("Cannot expand glob: %s", e.getMessage());
             }
         } else {
