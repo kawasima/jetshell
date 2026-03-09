@@ -11,9 +11,13 @@ import static org.testng.Assert.assertTrue;
 public class ResolveCommandTest extends JetShellTesting {
     public void testBadArtifactCoordinate() {
         test(
-                a -> assertCommand(a, "/resolve bad", "", null, null, "", ""),
+                // Pass err="" so the buffer is consumed and we assert it is empty on cmdout,
+                // then check cmderr in the same step via a custom lambda that reads and clears it.
                 a -> {
-                    if (a) {
+                    if (!a) {
+                        setCommandInput("/resolve bad\n");
+                    } else {
+                        assertOutput(getCommandOutput(), "", "command");
                         String err = getCommandErrorOutput();
                         assertTrue(err.contains("bad"), "Expected error to mention 'bad', got: " + err);
                     }

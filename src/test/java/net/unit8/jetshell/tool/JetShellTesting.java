@@ -150,10 +150,12 @@ public class JetShellTesting {
             }
             setCommandInput(cmd + "\n");
         } else {
-            assertOutput(getCommandOutput(), out, "command");
-            assertOutput(getCommandErrorOutput(), err, "command error");
-            assertOutput(getUserOutput(), print, "user");
-            assertOutput(getUserErrorOutput(), usererr, "user error");
+            // Only consume (and thus reset) a buffer when the caller actually wants to assert it.
+            // Leaving a buffer unconsumed lets a subsequent ReplTest step inspect it.
+            if (out != null) assertOutput(getCommandOutput(), out, "command");
+            if (err != null) assertOutput(getCommandErrorOutput(), err, "command error");
+            if (print != null) assertOutput(getUserOutput(), print, "user");
+            if (usererr != null) assertOutput(getUserErrorOutput(), usererr, "user error");
         }
     }
 
