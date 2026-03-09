@@ -6,6 +6,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -60,7 +61,7 @@ public class BatchModeExitCodeTest extends JetShellTesting {
     }
 
     public void testStartReturnsOneOnFailure() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream("int x = \"not an int\";\n/exit\n".getBytes());
+        ByteArrayInputStream in = new ByteArrayInputStream("int x = \"not an int\";\n/exit\n".getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         JetShellTool tool = JetShellTool.create(in, new PrintStream(out), new PrintStream(out));
         new JetShellCommandRegister().register(tool);
@@ -70,7 +71,7 @@ public class BatchModeExitCodeTest extends JetShellTesting {
     }
 
     public void testStartReturnsZeroOnSuccess() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream("int x = 1;\n/exit\n".getBytes());
+        ByteArrayInputStream in = new ByteArrayInputStream("int x = 1;\n/exit\n".getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         JetShellTool tool = JetShellTool.create(in, new PrintStream(out), new PrintStream(out));
         new JetShellCommandRegister().register(tool);
