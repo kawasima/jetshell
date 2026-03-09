@@ -192,13 +192,15 @@ public class JetShellTool {
 
         if (testPrompt) {
             startWithTestPrompt(loadList);
+            return hadFailure ? 1 : 0;
         } else {
-            startInteractive(loadList);
+            boolean batchMode = startInteractive(loadList);
+            return batchMode && hadFailure ? 1 : 0;
         }
-        return hadFailure ? 1 : 0;
     }
 
-    private void startInteractive(List<String> loadList) throws Exception {
+    // Returns true if running in batch (non-TTY) mode, false if interactive
+    private boolean startInteractive(List<String> loadList) throws Exception {
         Terminal terminal = TerminalBuilder.builder()
                 .system(true)
                 .build();
@@ -245,12 +247,14 @@ public class JetShellTool {
                 .build();
         lineReader.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
 
+        // JLine sets terminal type to "dumb" when stdin is not a TTY (piped/batch mode)
+        boolean batchMode = "dumb".equalsIgnoreCase(terminal.getType());
         try {
             try {
                 resetState(loadList);
             } catch (Exception e) {
                 hard("Failed to initialize: %s", e.getMessage());
-                return;
+                return batchMode;
             }
             hard("Welcome to JetShell -- Version %s", version());
             hard("Type /help for help");
@@ -265,6 +269,7 @@ public class JetShellTool {
             closeState();
             terminal.close();
         }
+        return batchMode;
     }
 
     private void startWithTestPrompt(List<String> loadList) {
