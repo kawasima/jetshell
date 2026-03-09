@@ -50,7 +50,7 @@ public class JetShellTool {
 
     public boolean testPrompt = false;
 
-    public boolean hadFailure() {
+    boolean hadFailure() {
         return hadFailure;
     }
 
@@ -187,7 +187,7 @@ public class JetShellTool {
     public int start(String[] args) throws Exception {
         List<String> loadList = processCommandArgs(args);
         if (loadList == null) {
-            return 0;
+            return 1;
         }
 
         if (testPrompt) {
@@ -254,6 +254,7 @@ public class JetShellTool {
                 resetState(loadList);
             } catch (Exception e) {
                 hard("Failed to initialize: %s", e.getMessage());
+                hadFailure = true;
                 return batchMode;
             }
             hard("Welcome to JetShell -- Version %s", version());
