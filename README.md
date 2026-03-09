@@ -1,5 +1,7 @@
 # JetShell
 
+**JetShell** stands for **J**Shell **E**xtension **T**ool.
+
 Exploring an unfamiliar library in Java normally means creating a project, writing a `pom.xml`, waiting for an IDE to index — all before writing a single line of code.
 
 JetShell removes that friction. Type a library name, press Tab to complete the Maven coordinates, and `/resolve` downloads it straight to your classpath. From there you can call APIs interactively, read Javadoc with `/doc`, and browse source code with `/source` — all without creating a project.
@@ -37,7 +39,7 @@ mvn package -DskipTests
 ```shell
 $ jetshell
 
-|  Welcome to JetShell -- Version 21.0.x
+|  Welcome to JetShell -- Version 1.0.0
 |  Type /help for help
 
 ->
