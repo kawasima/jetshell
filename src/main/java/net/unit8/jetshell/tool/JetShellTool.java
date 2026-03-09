@@ -46,7 +46,7 @@ public class JetShellTool {
     private List<String> replayableHistoryPrevious;
     private Set<String> startupSnippetIds;
     private boolean suppressOutput = false;
-    private boolean hadFailure = false;
+    boolean hadFailure = false;
 
     public boolean testPrompt = false;
 
@@ -240,7 +240,8 @@ public class JetShellTool {
                 .build();
         lineReader.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
 
-        boolean isBatchMode = !terminal.getType().equals("dumb") && System.console() == null;
+        // System.console() returns null when stdin is piped (batch mode)
+        boolean isBatchMode = System.console() == null;
         try {
             try {
                 resetState(loadList);
@@ -261,6 +262,7 @@ public class JetShellTool {
             closeState();
             terminal.close();
         }
+        // In batch mode, propagate snippet failures to the shell via exit code
         if (isBatchMode && hadFailure) {
             System.exit(1);
         }
@@ -360,6 +362,7 @@ public class JetShellTool {
         closeState();
         replayableHistoryPrevious = replayableHistory;
         replayableHistory = new ArrayList<>();
+        hadFailure = false;
 
         state = JShell.builder()
                 .in(userin)
