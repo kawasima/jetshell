@@ -936,8 +936,9 @@ public class JetShellTool {
     }
 
     private void cmdReload(String arg) {
-        boolean restore = "restore".equals(arg.trim());
-        boolean quiet = "quiet".equals(arg.trim());
+        List<String> tokens = Arrays.asList(arg.trim().split("\\s+"));
+        boolean restore = tokens.contains("restore");
+        boolean quiet = tokens.contains("quiet");
         List<String> toReplay = restore ? replayableHistoryPrevious : replayableHistory;
         if (toReplay == null) {
             toReplay = Collections.emptyList();
@@ -1028,7 +1029,8 @@ public class JetShellTool {
     }
 
     private String version() {
-        return System.getProperty("java.version", "unknown");
+        String v = JetShellTool.class.getPackage().getImplementationVersion();
+        return v != null ? v : System.getProperty("java.version", "unknown");
     }
 
     // --- Command args processing ---

@@ -91,6 +91,8 @@ public class ResolveContext {
 
         try {
             String sourceSpec = groupId + ":" + artifactId + ":jar:sources:" + version;
+            // resolveAsFiles is called for its side effect: downloading the source JAR
+            // into the local repository so that sourceJar.exists() becomes true.
             erebus.resolveAsFiles(sourceSpec);
             return sourceJar != null && sourceJar.exists() ? sourceJar : null;
         } catch (DependencyCollectionException | DependencyResolutionException |
