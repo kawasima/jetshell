@@ -1,82 +1,177 @@
-# Try artifact
+# JetShell
 
-TryArtifact is a tool for testing a maven artifacts in the JShell.
+Exploring an unfamiliar library in Java normally means creating a project, writing a `pom.xml`, waiting for an IDE to index — all before writing a single line of code.
+
+JetShell removes that friction. Type a library name, press Tab to complete the Maven coordinates, and `/resolve` downloads it straight to your classpath. From there you can call APIs interactively, read Javadoc with `/doc`, and browse source code with `/source` — all without creating a project.
+
+## Requirements
+
+- Java 21+
+
+## Installation
+
+### Download
+
+Download the latest release from [GitHub Releases](https://github.com/kawasima/jetshell/releases).
+
+The release artifact is a self-contained executable JAR (Really Executable JAR). Make it executable and run directly:
+
+```shell
+chmod +x jetshell
+./jetshell
+```
+
+### Build from source
+
+```shell
+git clone https://github.com/kawasima/jetshell.git
+cd jetshell
+mvn package -DskipTests
+./target/jetshell
+```
 
 ## Usage
 
-Download from https://github.com/kawasima/try-artifact/releases/tag/v0.3.0
+### Starting JetShell
 
-Start TryArtifact's JShell.
+```shell
+$ jetshell
 
-```
-% java -jar try-artifact-0.3.0.jar
-
-|  Welcome to JShell -- Version (version info not available)
+|  Welcome to JetShell -- Version 21.0.x
 |  Type /help for help
 
--> 
+->
 ```
 
-The `/resolve` command is available in the TryArtifact's JShell.
+### Resolving artifacts
+
+Use `/resolve` to download a Maven artifact and add it to the classpath. Tab completion suggests candidates from both your local `~/.m2/repository` and Maven Central.
 
 ```
--> /help
-|  Type a Java language expression, statement, or declaration.
-|  Or type one of the following commands:
-|  
-|     /list [all|start|<name or id>]                             -- list the source you have typed
-|     /edit <name or id>                                         -- edit a source entry referenced by name or id
-|     /drop <name or id>                                         -- delete a source entry referenced by name or id
-|     /save [all|history|start] <file>                           -- Save snippet source to a file.
-|     /open <file>                                               -- open a file as source input
-|     /vars                                                      -- list the declared variables and their values
-|     /methods                                                   -- list the declared methods and their signatures
-|     /classes                                                   -- list the declared classes
-|     /imports                                                   -- list the imported items
-|     /exit                                                      -- exit jshell
-|     /reset                                                     -- reset jshell
-|     /reload [restore] [quiet]                                  -- reset and replay relevant history -- current or previous (restore)
-|     /classpath <path>                                          -- add a path to the classpath
-|     /history                                                   -- history of what you have typed
-|     /help [<command>|<subject>]                                -- get information about jshell
-|     /set editor|start|feedback|newmode|prompt|format|field ... -- set jshell configuration information
-|     /?                                                         -- get information about jshell
-|     /!                                                         -- re-run last snippet
-|     /<id>                                                      -- re-run snippet by id
-|     /-<n>                                                      -- re-run n-th previous snippet
-|     /resolve <spec>                                            -- resolve an artifact
-|  
-|  For more information type '/help' followed by the name of command or a subject.
-|  For example '/help /list' or '/help intro'.  Subjects:
-|  
-|     intro     -- An introduction to the jshell tool
-|     shortcuts -- Describe shortcuts
+-> /resolve org.apache.commons:commons-lang3:3.14.0
+|  Path /home/user/.m2/repository/org/apache/commons/commons-lang3/3.14.0/commons-lang3-3.14.0.jar added to classpath
 
-```
-
-Execute the `/resolve` command with a artifact that you'll try.
-When you press `TAB` key, the candidates of artifacts are shown.
-
-```
--> /resolve org.
-org.carewebframework:org.carewebframework-parent:pom:4.0.6               org.carewebframework:org.carewebframework.amqp-parent:pom:4.0.6          org.carewebframework:org.carewebframework.api-parent:pom:4.0.6           
-org.carewebframework:org.carewebframework.ext-parent:pom:4.0.6           org.carewebframework:org.carewebframework.help-parent:pom:4.0.6          org.carewebframework:org.carewebframework.jms-parent:pom:4.0.6           
-org.carewebframework:org.carewebframework.lib-parent:pom:4.0.6           org.carewebframework:org.carewebframework.lib.plugin:pom:4.0.6           org.carewebframework:org.carewebframework.mvn-parent:pom:4.0.6           
-org.carewebframework:org.carewebframework.ui-parent:pom:4.0.6            org.jibx.schema.org.apache.maven:org.apache.maven:pom:1.1.4              org.jibx.schema.org.docbook:org.docbook:pom:1.1.4                        
-org.jibx.schema.org.hr_xml:org.hr_xml:pom:1.0.6                          org.jibx.schema.org.w3:org.w3:pom:1.1.4                                  org.jibx.schema.org.xmlsoap.schemas:org.xmlsoap.schemas:pom:1.1.4        
-org.jresearch:org.jresearch.pom:pom:25                                   org.openwms:org.openwms:pom:1.0                                          org.shaneking:org.shaneking:pom:0.0.1                                    
-org.smartdeveloperhub.harvester.org:org-harvester-aggregator:pom:0.1.0   org.smartdeveloperhub.harvester.org:org-harvester-container:pom:0.1.0    
-
-```
-
-When the artifact is resolved, you can be using it.
-
-```
--> /resolve org.apache.commons:commons-lang3:jar:3.6
-|  Path /home/kawasima/.m2/repository/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.jar added to classpath
-
-
--> org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric(30)
-|  Expression value is: "8D1ysKPGhHPLGpsducw0ch0SnSfixb"
+-> import org.apache.commons.lang3.StringUtils;
+-> StringUtils.capitalize("hello world")
+|  Expression value is: "Hello world"
 |    assigned to temporary variable $1 of type String
 ```
+
+### Tab completion
+
+Pressing `Tab` completes artifact coordinates incrementally:
+
+```
+-> /resolve org.apache.commons:<Tab>
+commons-beanutils    commons-codec    commons-collections4    commons-compress
+commons-csv          commons-io       commons-lang3           commons-math3
+...
+
+-> /resolve org.apache.commons:commons-lang3:<Tab>
+3.12.0    3.13.0    3.14.0
+```
+
+Local repository results appear instantly; Maven Central results appear after a brief search (shown with a spinner).
+
+### Viewing documentation
+
+Use `/doc` to display Javadoc for any class, method, or field. Works with simple names after import:
+
+```
+-> /doc java.util.List
+|  java.util.List<E>
+|
+|  An ordered collection, where the user has precise control over where in the
+|  list each element is inserted. ...
+
+-> import org.apache.commons.lang3.StringUtils;
+-> /doc StringUtils.isEmpty(
+|  boolean StringUtils.isEmpty(CharSequence cs)
+|
+|  Checks if a CharSequence is empty ("") or null. ...
+```
+
+Source JARs are downloaded automatically if needed to retrieve Javadoc for third-party libraries.
+
+### Viewing source code
+
+Use `/source` to display the source code of a resolved class. Simple names work after import:
+
+```
+-> /source org.apache.commons.lang3.StringUtils
+|   1: /*
+|   2:  * Licensed to the Apache Software Foundation (ASF) ...
+...
+
+-> import org.apache.commons.lang3.RandomStringUtils;
+-> /source RandomStringUtils
+|   1: public class RandomStringUtils {
+...
+```
+
+Source JARs are downloaded automatically if not already present locally.
+
+### Viewing dependencies
+
+Use `/deps` to inspect what has been resolved in the current session:
+
+```
+-> /deps
+|  org.apache.commons:commons-lang3:3.14.0 (1 files)
+|  com.google.guava:guava:33.2.1-jre (9 files)
+
+-> /deps com.google.guava:guava:33.2.1-jre
+|  com.google.guava:guava:jar:33.2.1-jre
+|    com.google.guava:failureaccess:jar:1.0.2
+|    com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava
+|    com.google.guava:guava-parent:pom:33.2.1-jre
+|    ...
+```
+
+### Command reference
+
+| Command | Description |
+| ------- | ----------- |
+| `/resolve <spec>` | Resolve a Maven artifact and add it to the classpath |
+| `/deps [spec]` | List resolved artifacts, or show dependency tree for a spec |
+| `/doc <expression>` | Show Javadoc for a class, method, or field |
+| `/source <class>` | Display source code of a class |
+| `/list [all\|start\|<id>]` | List evaluated snippets |
+| `/vars` | List declared variables and their values |
+| `/methods` | List declared methods |
+| `/classes` | List declared classes |
+| `/imports` | List active imports |
+| `/classpath <path>` | Add a path to the classpath manually |
+| `/open <file>` | Load and evaluate a `.jsh` script file |
+| `/save [all\|history\|start] <file>` | Save snippets to a file |
+| `/reset` | Reset the JShell state |
+| `/reload [restore\|quiet]` | Reset and replay history |
+| `/exit` | Exit JetShell |
+
+### Artifact coordinate format
+
+```
+<groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>
+```
+
+Examples:
+
+- `org.apache.commons:commons-lang3:3.14.0`
+- `com.google.guava:guava:33.2.1-jre`
+- `org.springframework.boot:spring-boot-starter-web:3.4.3`
+
+### Session history
+
+Command history is persisted across sessions in `~/.jetshell_history`. Use the up/down arrow keys to navigate previous inputs.
+
+### JVM options
+
+Pass JVM options via the `JAVA_OPTS` environment variable:
+
+```shell
+JAVA_OPTS="-Xmx1g" jetshell
+```
+
+## License
+
+Apache License 2.0
