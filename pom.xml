@@ -5,10 +5,10 @@
 
     <groupId>net.unit8.jetshell</groupId>
     <artifactId>jetshell</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <description>Try a maven artifact on-demand in JShell</description>
+    <description>JetShell — interactive JShell with Maven artifact resolution</description>
 
     <url>https://github.com/kawasima/jetshell</url>
 
