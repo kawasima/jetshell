@@ -78,8 +78,8 @@ public class ResolveContext {
 
         Path relative = repoRoot.relativize(jarPath);
         int nameCount = relative.getNameCount();
-        // Expect at least: <groupId-parts...>/<artifactId>/<version>/<file>
-        if (nameCount < 3) return null;
+        // Expect at least: <groupId>/<artifactId>/<version>/<file> = 4 segments
+        if (nameCount < 4) return null;
 
         String version = relative.getName(nameCount - 2).toString();
         String artifactId = relative.getName(nameCount - 3).toString();

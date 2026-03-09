@@ -582,10 +582,13 @@ public class JetShellTool {
             }
             int startPos = (int) diag.getStartPosition();
             int endPos = (int) diag.getEndPosition();
-            String[] sourceLines = source.split("\\R");
+            // Use a regex matcher to correctly track line-separator lengths (\r\n, \n, \r).
+            java.util.regex.Matcher lineMatcher = java.util.regex.Pattern.compile("\\R").matcher(source);
             int pos = 0;
-            for (String srcLine : sourceLines) {
-                int lineEnd = pos + srcLine.length();
+            int searchFrom = 0;
+            while (true) {
+                int lineEnd = lineMatcher.find(searchFrom) ? lineMatcher.start() : source.length();
+                String srcLine = source.substring(pos, lineEnd);
                 if (startPos >= pos && startPos <= lineEnd) {
                     hard("%s", srcLine);
                     StringBuilder sb = new StringBuilder();
@@ -595,7 +598,9 @@ public class JetShellTool {
                     hard("%s", sb.toString());
                     break;
                 }
-                pos = lineEnd + 1;
+                if (lineEnd == source.length()) break;
+                searchFrom = lineMatcher.end();
+                pos = lineMatcher.end();
             }
         }
     }
@@ -662,7 +667,11 @@ public class JetShellTool {
                 return;
             }
         }
-        command.run.handle(arg);
+        boolean handled = command.run.handle(arg);
+        if (handled && command.kind == CommandKind.REPLAY) {
+            String replayEntry = (command.command + " " + arg).trim();
+            replayableHistory.add(replayEntry);
+        }
     }
 
     private Command[] findCommand(String cmd, Predicate<Command> filter) {
@@ -730,7 +739,7 @@ public class JetShellTool {
             String cmd = prefix.substring(0, space);
             Command[] candidates = findCommand(cmd, c -> true);
             if (candidates.length == 1) {
-                result = candidates[0].completions.completionSuggestions(arg, cursor - space, anchor).stream();
+                result = candidates[0].completions.completionSuggestions(arg, cursor - (space + 1), anchor).stream();
                 anchor[0] += space + 1;
             } else {
                 result = Stream.empty();
@@ -852,6 +861,10 @@ public class JetShellTool {
         Stream<Snippet> snippets;
         if (parts.length == 2 && ("all".equals(parts[0]) || "start".equals(parts[0]) || "history".equals(parts[0]))) {
             filename = parts[1];
+            if (filename.isBlank()) {
+                hard("/save requires a filename");
+                return;
+            }
             if ("history".equals(parts[0])) {
                 try (BufferedWriter writer = Files.newBufferedWriter(toPathResolvingUserHome(filename))) {
                     for (String entry : replayableHistory) {
@@ -871,6 +884,10 @@ public class JetShellTool {
                 snippets = state.snippets().filter(s -> state.status(s).isActive());
             }
         } else {
+            if (arg.isBlank()) {
+                hard("/save requires a filename");
+                return;
+            }
             filename = arg;
             snippets = state.snippets().filter(s -> state.status(s).isActive());
         }
@@ -1019,11 +1036,17 @@ public class JetShellTool {
     // --- Utility ---
 
     public static Path toPathResolvingUserHome(String pathString) {
-        if (pathString.replace("~", "").trim().isEmpty()) {
-            return Paths.get(System.getProperty("user.home"));
-        }
         if (pathString.startsWith("~")) {
-            return Paths.get(System.getProperty("user.home"), pathString.substring(1));
+            String home = System.getProperty("user.home");
+            String remainder = pathString.substring(1);
+            if (!remainder.isEmpty() && remainder.startsWith(File.separator)) {
+                remainder = remainder.substring(File.separator.length());
+            }
+            if (remainder.isEmpty()) {
+                return Paths.get(home);
+            } else {
+                return Paths.get(home, remainder);
+            }
         }
         return Paths.get(pathString);
     }
