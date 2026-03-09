@@ -238,7 +238,12 @@ public class JetShellTool {
         lineReader.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
 
         try {
-            resetState(loadList);
+            try {
+                resetState(loadList);
+            } catch (Exception e) {
+                hard("Failed to initialize: %s", e.getMessage());
+                return;
+            }
             hard("Welcome to JetShell -- Version %s", version());
             hard("Type /help for help");
 
