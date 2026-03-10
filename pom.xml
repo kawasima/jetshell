@@ -5,7 +5,7 @@
 
     <groupId>net.unit8.jetshell</groupId>
     <artifactId>jetshell</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <description>JetShell — interactive JShell with Maven artifact resolution</description>
