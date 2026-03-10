@@ -1,10 +1,16 @@
 # JetShell
 
+[![Release](https://img.shields.io/github/v/release/kawasima/jetshell)](https://github.com/kawasima/jetshell/releases/latest)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Java](https://img.shields.io/badge/java-21%2B-orange.svg)](https://adoptium.net/)
+
 **JetShell** stands for **J**Shell **E**xtension **T**ool.
 
 Exploring an unfamiliar library in Java normally means creating a project, writing a `pom.xml`, waiting for an IDE to index — all before writing a single line of code.
 
 JetShell removes that friction. Type a library name, press Tab to complete the Maven coordinates, and `/resolve` downloads it straight to your classpath. From there you can call APIs interactively, read Javadoc with `/doc`, and browse source code with `/source` — all without creating a project.
+
+![JetShell Demo](docs/demo.gif)
 
 ## Requirements
 
