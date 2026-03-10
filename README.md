@@ -1,7 +1,7 @@
 # JetShell
 
 [![Release](https://img.shields.io/github/v/release/kawasima/jetshell)](https://github.com/kawasima/jetshell/releases/latest)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License](https://img.shields.io/badge/license-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 [![Java](https://img.shields.io/badge/java-21%2B-orange.svg)](https://adoptium.net/)
 
 **JetShell** stands for **J**Shell **E**xtension **T**ool.
@@ -182,4 +182,4 @@ JAVA_OPTS="-Xmx1g" jetshell
 
 ## License
 
-Apache License 2.0
+GNU General Public License v2.0
