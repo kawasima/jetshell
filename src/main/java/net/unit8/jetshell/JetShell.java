@@ -10,6 +10,9 @@ public class JetShell {
     public static void main(String[] args) throws Exception {
         JetShellTool tool = JetShellTool.create(System.in, System.out, System.err);
         new JetShellCommandRegister().register(tool);
-        tool.start(args);
+        int exitCode = tool.start(args);
+        if (exitCode != 0) {
+            System.exit(exitCode);
+        }
     }
 }

@@ -15,6 +15,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.prefs.Preferences;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -45,11 +46,19 @@ public class JetShellTool {
     private List<String> replayableHistoryPrevious;
     private Set<String> startupSnippetIds;
     private boolean suppressOutput = false;
+    private boolean hadFailure = false;
 
     public boolean testPrompt = false;
 
+    boolean hadFailure() {
+        return hadFailure;
+    }
+
     static final Preferences PREFS = Preferences.userRoot().node("tool/JetShell");
     private static final String STARTUP_KEY = "STARTUP";
+    private static final String GLOB_CHARS = "*?{[";
+    // Sentinel returned by processCommandArgs when -help or -version is handled (normal early exit)
+    private static final List<String> EARLY_EXIT = Collections.emptyList();
 
     static final String DEFAULT_STARTUP =
             "\n" +
@@ -177,20 +186,26 @@ public class JetShellTool {
 
     // --- Startup ---
 
-    public void start(String[] args) throws Exception {
+    public int start(String[] args) throws Exception {
         List<String> loadList = processCommandArgs(args);
         if (loadList == null) {
-            return;
+            return 1; // argument error
+        }
+        if (loadList == EARLY_EXIT) {
+            return 0; // -help or -version: normal early exit
         }
 
         if (testPrompt) {
             startWithTestPrompt(loadList);
+            return hadFailure ? 1 : 0;
         } else {
-            startInteractive(loadList);
+            boolean batchMode = startInteractive(loadList);
+            return batchMode && hadFailure ? 1 : 0;
         }
     }
 
-    private void startInteractive(List<String> loadList) throws Exception {
+    // Returns true if running in batch (non-TTY) mode, false if interactive
+    private boolean startInteractive(List<String> loadList) throws Exception {
         Terminal terminal = TerminalBuilder.builder()
                 .system(true)
                 .build();
@@ -237,12 +252,15 @@ public class JetShellTool {
                 .build();
         lineReader.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
 
+        // JLine sets terminal type to "dumb" when stdin is not a TTY (piped/batch mode)
+        boolean batchMode = "dumb".equalsIgnoreCase(terminal.getType());
         try {
             try {
                 resetState(loadList);
             } catch (Exception e) {
                 hard("Failed to initialize: %s", e.getMessage());
-                return;
+                hadFailure = true;
+                return batchMode;
             }
             hard("Welcome to JetShell -- Version %s", version());
             hard("Type /help for help");
@@ -257,6 +275,7 @@ public class JetShellTool {
             closeState();
             terminal.close();
         }
+        return batchMode;
     }
 
     private void startWithTestPrompt(List<String> loadList) {
@@ -274,6 +293,7 @@ public class JetShellTool {
             }
         } catch (IOException ex) {
             hard("Unexpected exception: %s", ex);
+            hadFailure = true;
         } finally {
             closeState();
         }
@@ -298,6 +318,7 @@ public class JetShellTool {
             }
         } catch (Exception ex) {
             hard("Unexpected exception: %s", ex);
+            hadFailure = true;
         }
     }
 
@@ -358,6 +379,7 @@ public class JetShellTool {
                 .in(userin)
                 .out(userout)
                 .err(usererr)
+                .executionEngine("local")
                 .build();
         analysis = state.sourceCodeAnalysis();
 
@@ -432,7 +454,9 @@ public class JetShellTool {
         boolean isActive = false;
         List<SnippetEvent> events = state.eval(source);
         for (SnippetEvent e : events) {
-            failed |= handleEvent(e);
+            boolean eventFailed = handleEvent(e);
+            failed |= eventFailed;
+            hadFailure |= eventFailed;
             isActive |= e.causeSnippet() == null
                     && e.status().isActive()
                     && e.snippet().subKind() != SubKind.VAR_VALUE_SUBKIND;
@@ -479,6 +503,7 @@ public class JetShellTool {
                 hard("Caused failure of dependent %s", ((DeclarationSnippet) sn).name());
             }
             printDiagnostics(source, diagnostics);
+            return true;
         } else {
             // Update event
             if (sn instanceof DeclarationSnippet) {
@@ -992,6 +1017,7 @@ public class JetShellTool {
             toReplay = Collections.emptyList();
         }
         hard("Resetting state.");
+        hadFailure = false;
         resetState(Collections.emptyList());
         for (String source : toReplay) {
             if (!quiet) {
@@ -1006,8 +1032,32 @@ public class JetShellTool {
             error("/classpath requires a path argument");
             return;
         }
-        state.addToClasspath(toPathResolvingUserHome(arg).toString());
-        fluff("Path %s added to classpath", arg);
+        Path p = toPathResolvingUserHome(arg);
+        String name = p.getFileName().toString();
+        if (name.chars().anyMatch(c -> GLOB_CHARS.indexOf(c) >= 0)) {
+            Path dir = p.getParent() != null ? p.getParent() : Path.of(".");
+            try {
+                PathMatcher matcher = dir.getFileSystem().getPathMatcher("glob:" + name);
+                try (Stream<Path> stream = Files.list(dir)) {
+                    List<Path> matched = stream.filter(f -> matcher.matches(f.getFileName()))
+                            .sorted()
+                            .collect(Collectors.toList());
+                    if (matched.isEmpty()) {
+                        error("No files matched: %s", arg);
+                    } else {
+                        matched.forEach(resolved -> {
+                            state.addToClasspath(resolved.toString());
+                            fluff("Path %s added to classpath", resolved);
+                        });
+                    }
+                }
+            } catch (IOException | PatternSyntaxException e) {
+                error("Cannot expand glob: %s", e.getMessage());
+            }
+        } else {
+            state.addToClasspath(p.toString());
+            fluff("Path %s added to classpath", arg);
+        }
     }
 
     private void cmdHelp(String arg) {
@@ -1138,10 +1188,10 @@ public class JetShellTool {
                         break;
                     case "-help":
                         printUsage();
-                        return null;
+                        return EARLY_EXIT;
                     case "-version":
                         cmdout.printf("jetshell %s%n", version());
-                        return null;
+                        return EARLY_EXIT;
                     default:
                         cmderr.printf("Unknown option: %s%n", arg);
                         printUsage();
